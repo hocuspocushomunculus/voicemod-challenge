@@ -13,9 +13,16 @@ QA challenge for Voicemod / 2022 /
 │   ├── log.html
 │   ├── output.xml
 │   ├── report.html
-│   ├── selenium-screenshot-1.png
-│ [...]
-│   └── selenium-screenshot-n.png
+│   ├── Test 1
+│   │   ├── screenshot-1.png
+│   │ [...]
+│   │   └── screenshot-n.png
+| [...]
+│   ├── Test 5
+│   │   ├── screenshot-1.png
+│   │ [...]
+│   │   └── screenshot-n.png
+├── sonar-project.properties
 └── VoicemodUAT.robot
 
 # Build docker image
@@ -32,7 +39,9 @@ docker run --rm -it --privileged \
 -w $WORKSPACE \
 -v $(pwd):$WORKSPACE \
 voicemod_uat_docker \
-robot --outputdir $WORKSPACE/results ./VoicemodUAT.robot
+robot --outputdir $WORKSPACE/results \
+--loglevel DEBUG \
+--pythonpath ":.:resources:" ./VoicemodUAT.robot
 ```
 
-# Log files available in reports/ folder
+# Log files available in results/ folder for each test case

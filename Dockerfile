@@ -31,6 +31,6 @@ RUN set -x \
    && mv geckodriver /usr/bin/
 
 # Install Robot Framework & dependencies
-RUN pip install robotframework-seleniumlibrary pyyaml
+RUN pip install robotframework-seleniumlibrary
 
 WORKDIR /tmp/voicemod_uat
