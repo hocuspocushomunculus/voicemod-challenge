@@ -13,8 +13,9 @@ Test Teardown   Test Teardown
 Test 1 - There are no broken links
     [Documentation]  Check if latest webapp deployment has
     ...  any broken links (should not have any)
-    Log   Hello World
-    
+    Collect hyperlink tags on homepage
+    Check for broken links
+
 
 *** Keywords ***
 Test Setup
