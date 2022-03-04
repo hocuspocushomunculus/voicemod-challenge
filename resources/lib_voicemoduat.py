@@ -13,8 +13,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from variables import WORKSPACE, voicemod_url
-from locators import accept_cookies_button
+from variables import WORKSPACE, voicemod_url, basic_mapping_by_languages
+from locators import accept_cookies_button, background_images, toggle_languages, \
+    select_language
 
 from robot.libraries.BuiltIn import BuiltIn
 
@@ -32,7 +33,7 @@ class lib_voicemoduat(unittest.TestCase):
         self.driver = None
         self.TEST_NAME = BuiltIn().get_variable_value("${TEST NAME}")
         self.a_tags = []
-        self.images = {"img": [], "page-container": []}
+        self.images = {"img": [], "background_images": []}
 
 
     def start_firefox_and_go_to_voicemod_webpage(self):
@@ -99,7 +100,7 @@ class lib_voicemoduat(unittest.TestCase):
             self.assertIn(status_code, [200, 302],
                           f"Link to {url} had a status code of {status_code}")
             status_code_counter[status_code] += 1
-            
+
             # Don't stress the webapp
             time.sleep(0.1)
 
@@ -112,15 +113,15 @@ class lib_voicemoduat(unittest.TestCase):
     def locate_images_on_homepage(self):
         """
         We locate all the images and store it in self.images class attribute.
+        - img tags
+        - anything which has `background-image: url("http(s)://...")` as style
         """
         self.images["img"] = self.driver.find_elements_by_tag_name("img")
-        self.images["page-container"] = \
-            self.driver.find_elements_by_class_name("page-container")
-
+        self.images["background_images"] = self.driver.find_elements_by_xpath(background_images)
         self.assertNotEqual(len(self.images["img"]), 0,
                             "Something went wrong, no images found.")
-        self.assertNotEqual(len(self.images["page-container"]), 0,
-                            "Something went wrong, no page-containers found.")
+        self.assertNotEqual(len(self.images["background_images"]), 0,
+                            "Something went wrong, no background images found.")
 
 
     @staticmethod
@@ -168,20 +169,55 @@ class lib_voicemoduat(unittest.TestCase):
         logging.info("Successfully checked %s images, none of them were broken.",
                      len(self.images["img"]))
 
-        # Check tags with class 'page-container'
-        for page_container in self.images["page-container"]:
-            style = page_container.get_attribute('style')
+        # Check tags with background images
+        for background_image in self.images["background_images"]:
+            style = background_image.get_attribute('style')
             url = re.findall(r"(https?://\S+)['|\"]\)", style)[0]
             r = requests.head(url)
 
             status_code = r.status_code
             logging.info("%s : %s", url, status_code)
             self.assertEqual(status_code, 200,
-                             ("Link to image (inside a page-container) "
+                             ("Link to background image "
                               f"at {url} had a status code of {status_code}"))
 
             # Don't stress the webapp
             time.sleep(0.1)
 
-        logging.info("Successfully checked %s images, none of them were broken.",
-                     len(self.images["page-container"]))
+        logging.info("Successfully checked %s background images, none of them were broken.",
+                     len(self.images["background_images"]))
+
+
+    def switch_to_language_and_do_checks(self, language=""):
+        """
+        Switch to the language supplied as an argument and check:
+        - Page title
+        - url
+        - save screenshot
+
+        :param language:    str, language to switch to
+        """
+        # Bring up the language selection menu
+        WebDriverWait(self.driver, 10) \
+            .until(EC.element_to_be_clickable((By.XPATH, toggle_languages))) \
+            .click()
+
+        # Select language
+        WebDriverWait(self.driver, 10) \
+            .until(EC.element_to_be_clickable((By.XPATH, select_language.format(lang=language)))) \
+            .click()
+
+        # Check URL
+        current_url = self.driver.current_url
+        self.assertEqual(current_url, basic_mapping_by_languages[language]["current_url"],
+                         (f"Switching to {language} didn't go as planned: "
+                          f"we are at: {current_url}"))
+
+        # Check title
+        title = self.driver.title
+        self.assertEqual(title, basic_mapping_by_languages[language]["title"],
+                         (f"Switching to {language} didn't go as planned: "
+                          f"title was: {title}"))
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/{language}.png")

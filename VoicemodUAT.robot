@@ -19,11 +19,23 @@ Test 1 - There are no broken links
 
 Test 2 - There are no broken images
     [Documentation]  Locate all images on the homepage (voicemod.net)
-    ...  and check if all of them load properly.
-    ...  (status code should be 200)
+    ...  and check if all of them load properly,
+    ...  (status code should be 200).
     Locate images on homepage
     Check for broken images
 
+Test 3 - User is able to switch languages
+    [Documentation]  Locate the element to toggle languages.
+    ...  Then switch the language and do some preliminary checks:
+    ...  - check url
+    ...  - check title
+    ...  - take screenshot
+    Switch to Language and do checks  language=fr
+    Switch to Language and do checks  language=ja
+    Switch to Language and do checks  language=ru
+    Switch to Language and do checks  language=es
+    Switch to Language and do checks  language=ko
+    Switch to Language and do checks  language=zh
 
 *** Keywords ***
 Test Setup
@@ -39,4 +51,3 @@ Test Setup
 Test Teardown
     [Documentation]  Tasks to do after each and every test case
     Close All Browsers
-
