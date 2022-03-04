@@ -33,4 +33,4 @@ RUN set -x \
 # Install Robot Framework & dependencies
 RUN pip install robotframework-seleniumlibrary
 
-WORKDIR /tmp/voicemod_uat
+WORKDIR /opt/voicemod_uat

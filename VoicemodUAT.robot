@@ -11,10 +11,18 @@ Test Teardown   Test Teardown
 
 *** Test Cases ***
 Test 1 - There are no broken links
-    [Documentation]  Check if latest webapp deployment has
-    ...  any broken links (should not have any)
-    Collect hyperlink tags on homepage
+    [Documentation]  Locate all hyperlinks (<a> tags)
+    ...  on the homepage (voicemod.net) and check for
+    ...  any broken links (status code should be 200 or 302)
+    Locate hyperlink tags on homepage
     Check for broken links
+
+Test 2 - There are no broken images
+    [Documentation]  Locate all images on the homepage (voicemod.net)
+    ...  and check if all of them load properly.
+    ...  (status code should be 200)
+    Locate images on homepage
+    Check for broken images
 
 
 *** Keywords ***

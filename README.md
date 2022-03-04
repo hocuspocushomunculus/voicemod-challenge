@@ -32,7 +32,7 @@ docker build -f ./Dockerfile -t voicemod_uat_docker .
 
 # Run test suite
 ```bash
-export WORKSPACE="/tmp/voicemod_uat" && \
+export WORKSPACE="/opt/voicemod_uat" && \
 docker run --rm -it --privileged \
 --name voicemod_uat \
 --network=host \
