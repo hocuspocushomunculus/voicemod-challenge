@@ -13,9 +13,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from variables import WORKSPACE, voicemod_url, basic_mapping_by_languages
+from variables import WORKSPACE, voicemod_url, basic_mapping_by_languages, \
+    tempmail_url, voicemod_useraccount_url
 from locators import accept_cookies_button, background_images, toggle_languages, \
-    select_language
+    select_language, email, my_account, email_input_box, continue_with_email_button, \
+    verification_code, password_input_box, verify_button, logout_button
 
 from robot.libraries.BuiltIn import BuiltIn
 
@@ -31,9 +33,12 @@ class lib_voicemoduat(unittest.TestCase):
         """
         super().__init__()
         self.driver = None
+        self.handles = {"homepage": None, "tempmail": None, "myaccount": None}
         self.TEST_NAME = BuiltIn().get_variable_value("${TEST NAME}")
         self.a_tags = []
         self.images = {"img": [], "background_images": []}
+        self.email = None
+        self.password = None
 
 
     def start_firefox_and_go_to_voicemod_webpage(self):
@@ -44,6 +49,7 @@ class lib_voicemoduat(unittest.TestCase):
         options = Options()
         options.headless = True
         options.add_argument('no-sandbox')
+        options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Firefox/97.0Mozilla/5.0")   # pylint: disable=line-too-long
         self.driver = webdriver.Firefox(options=options,
                                         service_log_path=WORKSPACE + "/results/geckodriver.log")
 
@@ -51,16 +57,9 @@ class lib_voicemoduat(unittest.TestCase):
         self.driver.get(voicemod_url)
         self.driver.maximize_window()
 
-        self.wait_until_page_is_fully_loaded()
+        # Store reference to voicemod homepage handle
+        self.handles["homepage"] = self.driver.window_handles[0]
 
-
-    def wait_until_page_is_fully_loaded(self):
-        """
-        Wait until the page is fully loaded. It will be reused in many situations.
-        """
-        WebDriverWait(self.driver, 10) \
-            .until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
-        logging.info("Page is fully loaded.")
 
     def accept_cookies(self):
         """
@@ -221,3 +220,129 @@ class lib_voicemoduat(unittest.TestCase):
 
         # Save screenshot
         self.driver.save_screenshot(f"results/{self.TEST_NAME}/{language}.png")
+
+
+    def store_new_window_handle(self, handle_name):
+        """
+        Locate the newly opened window (should be adjacent to where the new
+        window was opened from) and store it in self.handles with name `handle_name`.
+
+        :param handle_name:     str, name for the key to store the handle with
+        """
+        new_window_index = self.driver.window_handles.index(self.driver.current_window_handle) + 1
+        self.handles[handle_name] = self.driver.window_handles[new_window_index]
+
+        logging.info("Storing handle: '%s' as '%s' (was index %s)",
+                     self.driver.window_handles[new_window_index],
+                     handle_name, new_window_index)
+
+
+    def get_temporary_email_address(self):
+        """
+        Visit temp-mail.org and get a temporary email address. We'll store it
+        in self.email class attribute.
+        """
+        # Open new window, switch to it and open temp-mail.org
+        self.driver.execute_script("window.open('');")
+        self.store_new_window_handle("tempmail")
+        self.driver.switch_to.window(self.handles["tempmail"])
+        self.driver.get(tempmail_url)
+
+        # Give 10 seconds for temp-mail.org to load our email address
+        time.sleep(10)
+
+        # Get email address
+        self.email = self.driver.find_element_by_xpath(email).get_attribute('value')
+        logging.info("Using the following email address: %s", self.email)
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/temp-mail.org.png")
+
+
+    def initiate_registration_to_voicemod(self):
+        """
+        After having stored a temporary email, initiate the registration
+        for a free account at voicemod.net.
+        """
+        # Make sure to select correct window
+        self.driver.switch_to.window(self.handles["homepage"])
+
+        # Get hyperlink from element 'My Account' and open it in new window
+        my_account_url = self.driver.find_element_by_xpath(my_account).get_attribute("href")
+        self.driver.execute_script("window.open('');")
+        self.store_new_window_handle("myaccount")
+        self.driver.switch_to.window(self.handles["myaccount"])
+        self.driver.get(my_account_url)
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account.png")
+
+        # Register with email
+        self.driver.find_element_by_xpath(email_input_box).send_keys(self.email)
+        time.sleep(1)
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_with_email.png")
+        self.driver.find_element_by_xpath(continue_with_email_button).click()
+
+
+    def get_verification_code_from_email(self):
+        """
+        After we've input our email address into the email input box,
+        switch to the temp-mail.org window and scrape the password
+        from the verification email.
+        """
+        # Switch to temp-mail.org window
+        self.driver.switch_to.window(self.handles["tempmail"])
+
+        # Wait 10 seconds for the verification email
+        time.sleep(10)
+
+        # Get 6-digit password from email
+        self.password = \
+            re.findall(r"\d{6}", self.driver.find_element_by_xpath(verification_code).text)[0]
+
+        logging.info("Password received by email was: %s", self.password)
+
+
+    def finish_registration_to_voicemod(self):
+        """
+        After having received the 6-digit password via email, switch back
+        to the myaccount window and input the password.
+        """
+        # Switch to myaccount window
+        self.driver.switch_to.window(self.handles["myaccount"])
+
+        # Input the digits one by one to the appropriate textbox
+        for idx, digit in enumerate(self.password):
+            self.driver.find_element_by_xpath(password_input_box.format(idx=idx)).send_keys(digit)
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_with_password.png")
+
+        # Click verify button
+        self.driver.find_element_by_xpath(verify_button).click()
+
+        # Wait 2 seconds for redirect
+        time.sleep(2)
+
+        # Check url
+        self.assertIn(voicemod_useraccount_url, self.driver.current_url,
+                      f"Unexpected current url: {self.driver.current_url}")
+
+        # Save screenshot again
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_logged_in.png")
+
+
+    def logout_button_visible_and_functional(self):
+        """
+        After having finished registration, check if there's a logout button
+        and if it does log the user out.
+        """
+        # Locate logout button and click it
+        self.driver.find_element_by_xpath(logout_button).click()
+
+        # Check url again
+        self.assertNotIn(voicemod_useraccount_url, self.driver.current_url,
+                         f"Unexpected current url: {self.driver.current_url}")
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_logged_out.png")

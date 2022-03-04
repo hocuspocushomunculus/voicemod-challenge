@@ -37,6 +37,15 @@ Test 3 - User is able to switch languages
     Switch to Language and do checks  language=ko
     Switch to Language and do checks  language=zh
 
+Test 4 - User is able to create free account
+    [Documentation]  Create a temporary email account at temp-mail.org,
+    ...  and register a free account at voicemod.net.
+    Get Temporary Email Address
+    Initiate Registration to Voicemod
+    Get Verification Code from Email
+    Finish Registration to Voicemod
+    Logout button visible and functional
+
 *** Keywords ***
 Test Setup
     [Documentation]  Tasks to do before each and every test case

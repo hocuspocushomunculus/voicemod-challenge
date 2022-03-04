@@ -5,6 +5,8 @@ Generic variables used during Voicemod UAT testing.
 
 WORKSPACE = "/opt/voicemod_uat"
 voicemod_url = "https://voicemod.net"
+tempmail_url = "https://temp-mail.org"
+voicemod_useraccount_url = "https://account.voicemod.net/#/user-account"
 basic_mapping_by_languages = {
     "de": {
         "title": "GRATIS Live Stimmenverzerrer für Online-Spiele - Voicemod",
