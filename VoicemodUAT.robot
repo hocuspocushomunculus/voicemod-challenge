@@ -37,14 +37,23 @@ Test 3 - User is able to switch languages
     Switch to Language and do checks  language=ko
     Switch to Language and do checks  language=zh
 
-Test 4 - User is able to create free account
-    [Documentation]  Create a temporary email account at temp-mail.org,
-    ...  and register a free account at voicemod.net.
-    Get Temporary Email Address
-    Initiate Registration to Voicemod
-    Get Verification Code from Email
-    Finish Registration to Voicemod
+Test 4 - User is able to create free account and log out
+    [Documentation]  Register a new user account and
+    ...  verify that we can log out afterwards.
+    Register New User Account
     Logout button visible and functional
+    # Comment for usability: after account has been created
+    # there is nowhere to go, user cannot connect
+    # their socials, there's no 'return to homepage' button,
+    # only 'terms & conditions' and 'privacy policy'
+    # as well as the logout option.
+    # Bug or feature?
+
+Test 5 - User is able to create free account and download voicemod installer
+    [Documentation]  Register a new user account and
+    ...  try downloading the voicemod PC installer.
+    Register New User Account
+    Download Voicemod PC Installer
 
 *** Keywords ***
 Test Setup
@@ -56,7 +65,14 @@ Test Setup
     Start Firefox And Go To Voicemod Webpage
     Accept Cookies
 
-
 Test Teardown
     [Documentation]  Tasks to do after each and every test case
     Close All Browsers
+
+Register New User Account
+    [Documentation]  Create a temporary email account at temp-mail.org,
+    ...  and register a free account at voicemod.net.
+    Get Temporary Email Address
+    Initiate Registration to Voicemod
+    Get Verification Code from Email
+    Finish Registration to Voicemod

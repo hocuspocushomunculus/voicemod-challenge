@@ -2,6 +2,7 @@
 """
 Define class methods (keywords) used by VoicemodUAT.robot file here.
 """
+import os
 import re
 import time
 import logging
@@ -10,18 +11,21 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from variables import WORKSPACE, voicemod_url, basic_mapping_by_languages, \
-    tempmail_url, voicemod_useraccount_url
+    tempmail_url, voicemod_useraccount_url, voicemod_installer
 from locators import accept_cookies_button, background_images, toggle_languages, \
     select_language, email, my_account, email_input_box, continue_with_email_button, \
-    verification_code, password_input_box, verify_button, logout_button
+    verification_code, password_input_box, verify_button, logout_button, \
+    voicemod_changer_for_pc, try_it_now
 
 from robot.libraries.BuiltIn import BuiltIn
 
 # pylint: disable=invalid-name
+# pylint: disable=line-too-long
 
 class lib_voicemoduat(unittest.TestCase):
     """
@@ -33,7 +37,7 @@ class lib_voicemoduat(unittest.TestCase):
         """
         super().__init__()
         self.driver = None
-        self.handles = {"homepage": None, "tempmail": None, "myaccount": None}
+        self.handles = {}
         self.TEST_NAME = BuiltIn().get_variable_value("${TEST NAME}")
         self.a_tags = []
         self.images = {"img": [], "background_images": []}
@@ -46,11 +50,15 @@ class lib_voicemoduat(unittest.TestCase):
         Part of test setup, where we configure firefox and navigate to voicemod.net webapp
         """
         # Configure Firefox webdriver
+        profile = webdriver.FirefoxProfile()
+        profile.set_preference("browser.download.folderList", 2)        # Manually configure download location
+        profile.set_preference("browser.safebrowsing.downloads.enabled", False)
+        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/x-msdownload")  # Autodownload mime-type
+        profile.set_preference("browser.download.dir", os.path.join(WORKSPACE, "results"))
         options = Options()
         options.headless = True
         options.add_argument('no-sandbox')
-        options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Firefox/97.0Mozilla/5.0")   # pylint: disable=line-too-long
-        self.driver = webdriver.Firefox(options=options,
+        self.driver = webdriver.Firefox(options=options, firefox_profile=profile,
                                         service_log_path=WORKSPACE + "/results/geckodriver.log")
 
         # Navigate to voicemod.net and maximize window
@@ -67,10 +75,10 @@ class lib_voicemoduat(unittest.TestCase):
         """
         accept_cookies = WebDriverWait(self.driver, 10) \
             .until(EC.element_to_be_clickable((By.ID, accept_cookies_button)))
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/accept_cookie_visible.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/00-accept_cookie_visible.png")
         accept_cookies.click()
         time.sleep(1)
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/accept_cookie_not_visible.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/00-accept_cookie_not_visible.png")
 
 
     def locate_hyperlink_tags_on_homepage(self):
@@ -222,6 +230,21 @@ class lib_voicemoduat(unittest.TestCase):
         self.driver.save_screenshot(f"results/{self.TEST_NAME}/{language}.png")
 
 
+    def open_new_window(self, handle_name, url):
+        """
+        Open a new window, configure a name for the new handle
+        and navigate to url.
+
+        :param handle_name:     str, name to pass on to `store_new_window_handle`
+        :param url:             str, URL to navigate to in the new window
+        """
+        self.driver.execute_script("window.open('');")
+        self.store_new_window_handle(handle_name)
+        self.driver.switch_to.window(self.handles[handle_name])
+        time.sleep(1)
+        self.driver.get(url)
+
+
     def store_new_window_handle(self, handle_name):
         """
         Locate the newly opened window (should be adjacent to where the new
@@ -229,12 +252,11 @@ class lib_voicemoduat(unittest.TestCase):
 
         :param handle_name:     str, name for the key to store the handle with
         """
-        new_window_index = self.driver.window_handles.index(self.driver.current_window_handle) + 1
-        self.handles[handle_name] = self.driver.window_handles[new_window_index]
+        new_handle = [handle for handle in self.driver.window_handles \
+            if handle not in self.handles.values()][0]
+        self.handles[handle_name] = new_handle
 
-        logging.info("Storing handle: '%s' as '%s' (was index %s)",
-                     self.driver.window_handles[new_window_index],
-                     handle_name, new_window_index)
+        logging.info("Storing handle: '%s' as '%s'.", new_handle, handle_name)
 
 
     def get_temporary_email_address(self):
@@ -243,10 +265,7 @@ class lib_voicemoduat(unittest.TestCase):
         in self.email class attribute.
         """
         # Open new window, switch to it and open temp-mail.org
-        self.driver.execute_script("window.open('');")
-        self.store_new_window_handle("tempmail")
-        self.driver.switch_to.window(self.handles["tempmail"])
-        self.driver.get(tempmail_url)
+        self.open_new_window(handle_name="tempmail", url=tempmail_url)
 
         # Give 10 seconds for temp-mail.org to load our email address
         time.sleep(10)
@@ -256,7 +275,7 @@ class lib_voicemoduat(unittest.TestCase):
         logging.info("Using the following email address: %s", self.email)
 
         # Save screenshot
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/temp-mail.org.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/01-temp-mail.org.png")
 
 
     def initiate_registration_to_voicemod(self):
@@ -266,22 +285,21 @@ class lib_voicemoduat(unittest.TestCase):
         """
         # Make sure to select correct window
         self.driver.switch_to.window(self.handles["homepage"])
+        time.sleep(1)
 
         # Get hyperlink from element 'My Account' and open it in new window
         my_account_url = self.driver.find_element_by_xpath(my_account).get_attribute("href")
-        self.driver.execute_script("window.open('');")
-        self.store_new_window_handle("myaccount")
-        self.driver.switch_to.window(self.handles["myaccount"])
-        self.driver.get(my_account_url)
+        self.open_new_window(handle_name="myaccount", url=my_account_url)
 
         # Save screenshot
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/02-my_account.png")
 
         # Register with email
         self.driver.find_element_by_xpath(email_input_box).send_keys(self.email)
         time.sleep(1)
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_with_email.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/03-my_account_with_email.png")
         self.driver.find_element_by_xpath(continue_with_email_button).click()
+        time.sleep(1)
 
 
     def get_verification_code_from_email(self):
@@ -292,9 +310,14 @@ class lib_voicemoduat(unittest.TestCase):
         """
         # Switch to temp-mail.org window
         self.driver.switch_to.window(self.handles["tempmail"])
+        time.sleep(1)
 
-        # Wait 10 seconds for the verification email
+        # Press page down to get visibility on incoming emails and wait 5 seconds
+        self.driver.find_element_by_css_selector('body').send_keys(Keys.PAGE_DOWN)
         time.sleep(10)
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/04-temp-mail.org_password.png")
 
         # Get 6-digit password from email
         self.password = \
@@ -316,7 +339,7 @@ class lib_voicemoduat(unittest.TestCase):
             self.driver.find_element_by_xpath(password_input_box.format(idx=idx)).send_keys(digit)
 
         # Save screenshot
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_with_password.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/05-my_account_with_password.png")
 
         # Click verify button
         self.driver.find_element_by_xpath(verify_button).click()
@@ -329,7 +352,7 @@ class lib_voicemoduat(unittest.TestCase):
                       f"Unexpected current url: {self.driver.current_url}")
 
         # Save screenshot again
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_logged_in.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/06-my_account_logged_in.png")
 
 
     def logout_button_visible_and_functional(self):
@@ -339,10 +362,45 @@ class lib_voicemoduat(unittest.TestCase):
         """
         # Locate logout button and click it
         self.driver.find_element_by_xpath(logout_button).click()
+        time.sleep(2)
 
         # Check url again
         self.assertNotIn(voicemod_useraccount_url, self.driver.current_url,
                          f"Unexpected current url: {self.driver.current_url}")
 
         # Save screenshot
-        self.driver.save_screenshot(f"results/{self.TEST_NAME}/my_account_logged_out.png")
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/07-my_account_logged_out.png")
+
+
+    def download_voicemod_pc_installer(self):
+        """
+        After having created a free user account at voicemod,
+        switch back to voicemod.net homepage window and try
+        downloading the Voicemod PC installer.
+        """
+        # Switch to the homepage window
+        self.driver.switch_to.window(self.handles["homepage"])
+        time.sleep(1)
+
+        # Select the `Voice Changer for PC` button
+        WebDriverWait(self.driver, 10) \
+            .until(EC.element_to_be_clickable((By.XPATH, voicemod_changer_for_pc))) \
+            .click()
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/07-voicemod_changer_for_pc.png")
+
+        # Click the `Try it now` button
+        WebDriverWait(self.driver, 10) \
+            .until(EC.element_to_be_clickable((By.XPATH, try_it_now))) \
+            .click()
+        time.sleep(5)
+
+        # Save screenshot
+        self.driver.save_screenshot(f"results/{self.TEST_NAME}/08-download_started.png")
+
+        # Wait for 60 seconds for download to finish
+        time.sleep(60)
+
+        # Verify file has been downloaded:
+        assert os.path.isfile(os.path.join(WORKSPACE, "results", voicemod_installer))

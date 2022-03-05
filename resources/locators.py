@@ -18,3 +18,6 @@ continue_with_email_button = '//button[@data-testid="email-button"]'
 password_input_box = '//*[@id="inputBox{idx}"]'
 verify_button = '//button[@data-testid="verify-button"]'
 logout_button = '//button/span[contains(text(), "Log out")]/parent::button'
+
+voicemod_changer_for_pc = '//a[contains(text(), "Voice Changer for PC")]'
+try_it_now = '//a[contains(text(), "TRY IT NOW")]'

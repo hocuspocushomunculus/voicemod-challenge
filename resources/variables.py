@@ -37,3 +37,4 @@ basic_mapping_by_languages = {
         "current_url": "https://www.voicemod.net/zh/"
     }
 }
+voicemod_installer = "VoicemodSetup_2.26.0.1.exe"
