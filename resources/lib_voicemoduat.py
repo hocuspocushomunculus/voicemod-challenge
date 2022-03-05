@@ -31,18 +31,21 @@ class lib_voicemoduat(unittest.TestCase):
     """
     Class to contain attributes and keywords used during UAT testing of Voicemod webapp.
     """
+    ROBOT_LIBRARY_SCOPE = 'TEST'
+
     def __init__(self):
         """
-        Initialize some class attributes
+        Initialize some class attributes that can be shared among keywords.
         """
         super().__init__()
         self.driver = None
         self.handles = {}
-        self.TEST_NAME = BuiltIn().get_variable_value("${TEST NAME}")
         self.a_tags = []
         self.images = {"img": [], "background_images": []}
         self.email = None
         self.password = None
+        
+        self.TEST_NAME = BuiltIn().get_variable_value("${TEST NAME}")
 
 
     def start_firefox_and_go_to_voicemod_webpage(self):
@@ -170,7 +173,7 @@ class lib_voicemoduat(unittest.TestCase):
             self.assertEqual(status_code, 200,
                              f"Link to image at {url} had a status code of {status_code}")
 
-            # Don't stress the webapp
+            # Don't stress the hosting server
             time.sleep(0.1)
 
         logging.info("Successfully checked %s images, none of them were broken.",
@@ -188,7 +191,7 @@ class lib_voicemoduat(unittest.TestCase):
                              ("Link to background image "
                               f"at {url} had a status code of {status_code}"))
 
-            # Don't stress the webapp
+            # Don't stress the hosting server
             time.sleep(0.1)
 
         logging.info("Successfully checked %s background images, none of them were broken.",
@@ -199,8 +202,8 @@ class lib_voicemoduat(unittest.TestCase):
         """
         Switch to the language supplied as an argument and check:
         - Page title
-        - url
-        - save screenshot
+        - URL
+        - Save screenshot for proof
 
         :param language:    str, language to switch to
         """
@@ -232,8 +235,10 @@ class lib_voicemoduat(unittest.TestCase):
 
     def open_new_window(self, handle_name, url):
         """
-        Open a new window, configure a name for the new handle
-        and navigate to url.
+        Keyword for below repeating scenario:
+        1. Open a new window
+        2. Configure and store a name for the new handle
+        3. Navigate to url.
 
         :param handle_name:     str, name to pass on to `store_new_window_handle`
         :param url:             str, URL to navigate to in the new window
@@ -247,8 +252,10 @@ class lib_voicemoduat(unittest.TestCase):
 
     def store_new_window_handle(self, handle_name):
         """
-        Locate the newly opened window (should be adjacent to where the new
-        window was opened from) and store it in self.handles with name `handle_name`.
+        Locate the newly opened window:
+        1. Compare available window handles to those we have already
+           stored in self.handles, and identify the new window.
+        2. Store handle with a name in self.handles
 
         :param handle_name:     str, name for the key to store the handle with
         """
@@ -349,7 +356,8 @@ class lib_voicemoduat(unittest.TestCase):
 
         # Check url
         self.assertIn(voicemod_useraccount_url, self.driver.current_url,
-                      f"Unexpected current url: {self.driver.current_url}")
+                      (f"Unexpected current url: {self.driver.current_url},"
+                       " user should be logged in, but wasn't."))
 
         # Save screenshot again
         self.driver.save_screenshot(f"results/{self.TEST_NAME}/06-my_account_logged_in.png")
@@ -366,7 +374,8 @@ class lib_voicemoduat(unittest.TestCase):
 
         # Check url again
         self.assertNotIn(voicemod_useraccount_url, self.driver.current_url,
-                         f"Unexpected current url: {self.driver.current_url}")
+                         (f"Unexpected current url: {self.driver.current_url},"
+                          " user should be logged out, but was still logged in."))
 
         # Save screenshot
         self.driver.save_screenshot(f"results/{self.TEST_NAME}/07-my_account_logged_out.png")
@@ -403,4 +412,5 @@ class lib_voicemoduat(unittest.TestCase):
         time.sleep(60)
 
         # Verify file has been downloaded:
-        assert os.path.isfile(os.path.join(WORKSPACE, "results", voicemod_installer))
+        assert os.path.isfile(os.path.join(WORKSPACE, "results", voicemod_installer)), \
+            f"{voicemod_installer} hasn't been found, something went wrong with the download"

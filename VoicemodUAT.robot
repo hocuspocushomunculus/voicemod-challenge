@@ -1,13 +1,15 @@
 *** Settings ***
+Documentation   Voicemod webapp UAT testing featuring
+...  5 test cases defined after exploring the webapp.
+
 Library    OperatingSystem
 Library    SeleniumLibrary
+Library    resources/lib_voicemoduat.py
 Variables  resources/locators.py
 Variables  resources/variables.py
 
-Library    resources/lib_voicemoduat.py
-
 Test Setup      Test Setup
-Test Teardown   Test Teardown
+Test Teardown   Close All Browsers
 
 *** Test Cases ***
 Test 1 - There are no broken links
@@ -64,10 +66,6 @@ Test Setup
 
     Start Firefox And Go To Voicemod Webpage
     Accept Cookies
-
-Test Teardown
-    [Documentation]  Tasks to do after each and every test case
-    Close All Browsers
 
 Register New User Account
     [Documentation]  Create a temporary email account at temp-mail.org,
