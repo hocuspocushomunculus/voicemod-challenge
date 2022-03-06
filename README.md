@@ -42,13 +42,13 @@
 1. Build Docker image from Dockerfile
 2. Execute robot command
 
-### **Build Docker image from Dockerfile**
+### **1. Build Docker image from Dockerfile**
 
 ```bash
 docker build -f ./Dockerfile -t voicemod_uat_docker .
 ```
 
-### **Execute robot command**
+### **2. Execute robot command**
 
 - Loglevel can be adjusted to DEBUG level to get more verbose logs
 
